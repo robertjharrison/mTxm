@@ -239,7 +239,7 @@ void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* 
 ''')
 
 
-f = open("mtxmq.h","w")
+f = open("mTxmq.h","w")
 f.write("extern void set_kernel_trace(bool);\n")
 f.write("extern void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* a, const double* b, int itile=-1, int jtile=-1);\n")
 f.write("static const int MAX_ITILE=%d, MAX_JTILE=%d;\n" % (MAX_ITILE,MAX_JTILE))

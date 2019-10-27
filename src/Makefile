@@ -40,24 +40,16 @@ LDFLAGS =  -L/gpfs/home/rharrison/libxsmm/lib -lxsmm -L${MKLROOT}/lib/intel64 -W
 #CXX = armclang++
 #LDFLAGS=-L/opt/arm/armpl-19.2.0_Cortex-A72_Ubuntu-16.04_arm-hpc-compiler_19.2_aarch64-linux/lib -larmpl -lamath
 
-v5:	v5.o
+tnew:	tnew.o mTxmq.o timerstuff.h
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+
+mTxmq.h mTxmq.cc:	gen.py gen_avx2.py gen_avx512.py gen_neon.py
+	python gen.py > mTxmq.cc
+
+tnew.o:	mTxmq.h 
+
+asm:	mTxmq.cc
+	$(CXX) $(CXXFLAGS) -S -c mTxmq.cc
 
 clean:
-	/bin/rm -f v5 testt-avx2 tnew *.o
-
-asm:
-	$(CXX) $(CXXFLAGS) -S -c g.cc
-
-tnew:	tnew.o g.o timerstuff.h
-	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
-
-gen:
-	python gen.py > g.cc
-	g++-9 -Ofast -mtune=native -ffast-math -mavx -mavx2 -mfma -Wall -c g.cc
-
-g.cc:	gen.py gen_avx2.py gen_avx512.py
-	python gen.py > g.cc
-
-g.o:	g.cc
-	$(CXX) $(CXXFLAGS) -c $^ -o $@
+	/bin/rm -rf tnew *.o mTxmq.cc mTxmq.h *~ __pycache__ 

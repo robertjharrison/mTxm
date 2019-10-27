@@ -14,7 +14,7 @@ extern "C" void dgemm_(const char *transa, const char *transb, const armpl_int_t
 #include <algorithm>
 #include <list>
 
-#include "mtxmq.h"
+#include "mTxmq.h"
 
 double DFLOPS=20e9;
 
