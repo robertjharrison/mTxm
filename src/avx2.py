@@ -6,9 +6,10 @@ DATA_TYPE="double"
 REGISTER_WIDTH = 4
 NUMBER_OF_REGISTERS = 16
 MASK_IN_REGISTER = 0 # should be 1 ??
-TARGET_JTILE = 16 # IT=2
+TARGET_JTILE = 12
+TARGET_ITILE = 4
 MAX_JTILE = 20
-MAX_ITILE = 14 + 4
+MAX_ITILE = 14 + 2
 
 def zero(register):
     print("%s=_mm256_setzero_pd(); " % register,end="")

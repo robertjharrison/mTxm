@@ -20,12 +20,12 @@ Usage: python3 gen.py target [tuning data file name]")
 
 if len(sys.argv) == 2:
     target = sys.argv[1]
-    tuner = "default"
+    tuningdata = "none"
     #print("Generating for target '%s' with default tuner"%target)
 elif len(sys.argv) == 3:
     target = sys.argv[1]
-    tuner = sys.argv[2]
-    #print("Generating for target '%s' with tuning data from '%s'"%(target,tuner))
+    tuningdata = sys.argv[2]
+    #print("Generating for target '%s' with tuning data from '%s'"%(target,tuningdata))
 else:
     print_help()
     sys.exit(1)
@@ -218,10 +218,10 @@ static inline kernelT kernel(int itile, int jtile) {
 ''')
 
 
-if tuner == 'default':
+if tuningdata == 'none':
     arch.print_tuner()
 else:
-    tune.print_tuner(arch,tuner)
+    tune.print_tuner(arch,tuningdata)
 
 print('''
 void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* a, const double* b, int itile=-1, int jtile=-1) {
