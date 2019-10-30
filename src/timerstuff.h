@@ -7,7 +7,6 @@
 #include <ratio>
 #include <chrono>
 
-#define X86
 #ifdef X86
 /////// Cycle count on x86
 // Returns current cycle count for this thread

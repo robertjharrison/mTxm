@@ -258,7 +258,7 @@ void timer(funcT mTxmq) {
 
 template <typename funcT>
 void search(funcT f, int ni, int nj, int nk) {
-    const int len = 32768;
+    const int len = 32768*2;
     
     double *a, *b, *c, *d;  
     if(posix_memalign((void **) &a, ALIGNMENT, len*sizeof(double))) exit(1);
@@ -295,11 +295,13 @@ void search(funcT f, int ni, int nj, int nk) {
 
     const int W=REGISTER_WIDTH;
     const int NR=NUMBER_OF_REGISTERS;
-    const int maxjtile=MAX_JTILE;
-    for (int jtile=std::min(W,nj); jtile<=std::min(maxjtile,nj); jtile++) {
+    for (int jtile=std::min(W,nj); jtile<=std::min(MAX_JTILE,nj); jtile++) {
         int jr = (jtile-1)/W+1;
-        int maxitile = std::min(MAX_ITILE,std::min((NR-1)/jr-1 + 1,ni));
+	// this must match corresponding loop in gen.py
+        int maxitile = std::min(MAX_ITILE,std::min((NR-1)/jr-1 + 2,ni));
         for (int itile=std::max(1,maxitile-3); itile<=maxitile; itile++) {
+	  //for (int itile=1; itile<=maxitile; itile++) {
+	  //std::cout << "search " << itile << " " << jtile << std::endl;
             double fastest=0.0;
             for (int t=0; t<ntrial; t++) {
                 double rate;
@@ -318,10 +320,12 @@ void search(funcT f, int ni, int nj, int nk) {
     }
     results.sort();
     printf("%4d %4d %4d", ni, nj, nk);
-    size_t n = std::min(size_t(3),results.size());
+    double best = results.back().rate;
+    size_t n = results.size();
     for (size_t i=0; i<n; i++) {
         stats s = results.back(); results.pop_back();
-	printf("    %2d %2d %8.2f", s.it, s.jt, s.rate);
+	if (s.rate>0.95*best)
+	  printf("      %2d %2d %8.2f", s.it, s.jt, s.rate);
     }
     printf("\n");
     free(a);
@@ -338,7 +342,7 @@ int main() {
 
 #ifdef USE_LIBXSMM
     libxsmm_init();
-#endif    
+#endif
 
     cpu_set_t mask;
     CPU_ZERO(&mask);
@@ -347,49 +351,59 @@ int main() {
         perror("system error message");
         std::cout << "ThreadBase: set_affinity: Could not set cpu affinity" << std::endl;
     }
-    
-    //tester(&mTxmqG);
-    timer(&mTxmqG);
-
     auto num = std::chrono::high_resolution_clock::period::num;
     auto den = std::chrono::high_resolution_clock::period::den;
     std::cout << "period " << double(num)/den << std::endl;
 
-    //testone(&mTxmqG,36,36,36,false, true);
-    //tester(&mTxmqG);
- 
+    try {
+        // tester(&mTxmqG);
+        // timer(&mTxmqG);
 
-    // std::cout << "square\n";
-    // for (int n=1; n<129; n++) search(&mTxmqG,n,n,n);
 
-    // std::cout << "square k=4\n";
-    // for (int n=1; n<129; n++) search(&mTxmqG,n,n,4);
+       //testone(&mTxmqG,36,36,36,false, true);
+       //tester(&mTxmqG);
 
-    // std::cout << "square k=8\n";
-    // for (int n=1; n<65; n++) search(&mTxmqG,n,n,8);
 
-    // std::cout << "small non-square k=8\n";
-    // for (int n=1; n<33; n++) 
-    //   for (int m=1; m<33; m++) 
-    // 	search(&mTxmqG,n,m,8);
+      std::cout << "square\n";
+      for (int n=1; n<=64; n++) search(&mTxmqG,n,n,n);
+      
+      std::cout << "(n,n*n)T(n,n)\n";
+      for (int n=1; n<=32; n++) search(&mTxmqG,n*n,n,n);
 
-    std::cout << "(n,n*n)T(n,n)\n";
-    for (int n=1; n<33; n++) search(&mTxmqG,n*n,n,n);
+      std::cout << "small non-square k=8\n";
+      for (int n=1; n<=32; n++) 
+        for (int m=1; m<=32; m++) 
+	  search(&mTxmqG,n,m,8);
 
-    // std::cout << "(n,n*n)T(n,m)\n";
-    // for (int n=1; n<33; n++) {
-    //   for (int m=1; m<=n; m++) {
-    // 	search(&mTxmqG,n*n,m,n);
-    //   }
-    // }
+      // std::cout << "(20,20*20)T(20,n)\n";
+      //  for (int n=1; n<21; n++) search(&mTxmqG,400,n,20);
 
-    // std::cout << "(m,n*n)T(m,n)\n";
-    // for (int n=1; n<33; n++) {
-    //   for (int m=1; m<=n; m++) {
-    // 	search(&mTxmqG,m,n*n,n);
-    //   }
-    // }
+       // std::cout << "square k=4\n";
+       // for (int n=1; n<129; n++) search(&mTxmqG,n,n,4);
 
+       // std::cout << "square k=8\n";
+       // for (int n=1; n<65; n++) search(&mTxmqG,n,n,8);
+
+
+
+       // std::cout << "(n,n*n)T(n,m)\n";
+       // for (int n=1; n<33; n++) {
+       //   for (int m=1; m<=n; m++) {
+       // 	search(&mTxmqG,n*n,m,n);
+       //   }
+       // }
+
+       // std::cout << "(m,n*n)T(m,n)\n";
+       // for (int n=1; n<33; n++) {
+       //   for (int m=1; m<=n; m++) {
+       // 	search(&mTxmqG,m,n*n,n);
+       //   }
+       // }
+    }
+    catch (const char* c) {
+      std::cout << "exception " << c << std::endl;
+      return 1;
+    }
     
     return 0;
 }
