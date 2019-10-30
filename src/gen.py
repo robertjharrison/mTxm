@@ -3,6 +3,8 @@ import os
 import math
 import importlib
 
+import tune
+
 def print_help():
     print("""
 Usage: python3 gen.py target [tuning data file name]")
@@ -20,7 +22,7 @@ if len(sys.argv) == 2:
     target = sys.argv[1]
     tuner = "default"
     #print("Generating for target '%s' with default tuner"%target)
-elif len(sys.argv == 3):
+elif len(sys.argv) == 3:
     target = sys.argv[1]
     tuner = sys.argv[2]
     #print("Generating for target '%s' with tuning data from '%s'"%(target,tuner))
@@ -176,6 +178,7 @@ print("static bool kernel_trace = false;")
 print("void set_kernel_trace(bool value){kernel_trace=value;}")
 print("using kernelT = void (*)(const int dimi,const int dimj,const int dimk,double* __restrict__ c,int incC,const double* a,int incA,const double* b,int incB);")
 print("static const int MAX_ITILE=%d, MAX_JTILE=%d;" % (arch.MAX_ITILE,arch.MAX_JTILE))
+print("static const int TARGET_ITILE=%d;"%arch.TARGET_ITILE)
 print("static const int TARGET_JTILE=%d;"%arch.TARGET_JTILE)
 print("static const int REGISTER_WIDTH=%d;"%arch.REGISTER_WIDTH)
 print("static const int MASK_IN_REGISTER=%d;"%arch.MASK_IN_REGISTER)
@@ -207,14 +210,18 @@ print("}")
 print('''
 static inline kernelT kernel(int itile, int jtile) {
   if (itile<0 || itile>MAX_ITILE) {std::cerr<<itile<<std::endl; throw "bad itile dispatching kernel";}
-  if (jtile<0 || jtile>MAX_JTILE) {std::cerr<<itile<<std::endl; throw "bad jtile dispatching kernel";}
+  if (jtile<0 || jtile>MAX_JTILE) {std::cerr<<jtile<<std::endl; throw "bad jtile dispatching kernel";}
   kernelT f = dispatch[itile][jtile];
   if (!f) {std::cerr << itile << " " << jtile << std::endl; throw "kernel not found dispatching kernel";}
   return f;
 }
 ''')
 
-arch.print_tuner()
+
+if tuner == 'default':
+    arch.print_tuner()
+else:
+    tune.print_tuner(arch,tuner)
 
 print('''
 void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* a, const double* b, int itile=-1, int jtile=-1) {
@@ -274,6 +281,7 @@ f = open("mTxmq.h","w")
 f.write("extern void set_kernel_trace(bool);\n")
 f.write("extern void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* a, const double* b, int itile=-1, int jtile=-1);\n")
 f.write("static const int MAX_ITILE=%d, MAX_JTILE=%d;\n" % (arch.MAX_ITILE,arch.MAX_JTILE))
+f.write("static const int TARGET_ITILE=%d;\n"%arch.TARGET_ITILE)
 f.write("static const int TARGET_JTILE=%d;\n"%arch.TARGET_JTILE)
 f.write("static const int REGISTER_WIDTH=%d;\n"%arch.REGISTER_WIDTH)
 f.write("static const int MASK_IN_REGISTER=%d;\n"%arch.MASK_IN_REGISTER)

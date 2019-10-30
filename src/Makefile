@@ -1,4 +1,5 @@
 TARGET_ARCHITECTURE=neon
+TUNING_DATA=tune-graviton.txt
 
 # Intel compiler for AVX512 (snmem)
 #CXX = icpc
@@ -49,16 +50,28 @@ PYTHON=python3
 #LDFLAGS=-L/opt/arm/armpl-19.2.0_Cortex-A72_Ubuntu-16.04_arm-hpc-compiler_19.2_aarch64-linux/lib -larmpl -lamath
 #PYTHON=python3
 
-test:	test.o mTxmq.o
+TARGETS = tester tuner bencher
+
+all:	$(TARGETS)
+
+tester:	tester.o mTxmq.o
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
-mTxmq.h mTxmq.cc:	gen.py avx2.py avx512.py neon.py
-	$(PYTHON) gen.py $(TARGET_ARCHITECTURE) > mTxmq.cc
+tuner:	tuner.o mTxmq.o
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
-test.o:	mTxmq.h 
+bencher:	bencher.o mTxmq.o
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+
+mTxmq.h mTxmq.cc:	gen.py avx2.py avx512.py neon.py tune.py
+	$(PYTHON) gen.py $(TARGET_ARCHITECTURE) $(TUNING_DATA) > mTxmq.cc
+
+mTxmq.o:	mTxmq.cc mTxmq.h
+
+tester.o tuner.o bencher.o:	mTxmq.h 
 
 asm:	mTxmq.cc
 	$(CXX) $(CXXFLAGS) -S -c mTxmq.cc
 
 clean:
-	/bin/rm -rf test *.o mTxmq.cc mTxmq.h *~ __pycache__ 
+	/bin/rm -rf $(TARGETS) *.o mTxmq.cc mTxmq.h *~ __pycache__  mTxmq.s

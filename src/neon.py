@@ -1,5 +1,5 @@
 ##############################################
-# This for AVX2
+# This for ARM64 NEON
 
 REGISTER_TYPE="float64x2_t"
 DATA_TYPE="double"
@@ -46,6 +46,7 @@ def print_include():
     print("static const double dzero=0.0;")
 
 def print_tuner():
+    ''' Print out the tuner to use in the absence of tuning data '''
     print('''
 void tune(int ni, int nj, int nk, int& itile, int& jtile) {
     if (ni==nj) { // square
