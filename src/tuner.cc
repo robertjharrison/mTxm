@@ -40,7 +40,7 @@ void search(int ni, int nj, int nk) {
     
     double nflop = 2.0*ni*nj*nk;
     double est = 1e-6 + nflop/2e10;
-    int ntrial=100;
+    int ntrial=10;
 
     // Ajust repetition count to hit target duration
     int nloop=std::max(1,int(target/est));
@@ -68,8 +68,8 @@ void search(int ni, int nj, int nk) {
         int jr = (jtile-1)/W+1;
 	// this must match corresponding loop in gen.py
         int maxitile = std::min(MAX_ITILE,std::min((NR-1)/jr-1 + 2,ni));
-        for (int itile=std::max(1,maxitile-3); itile<=maxitile; itile++) {
-	  //for (int itile=1; itile<=maxitile; itile++) {
+        //for (int itile=std::max(1,maxitile-3); itile<=maxitile; itile++) {
+	for (int itile=1; itile<=maxitile; itile++) {
 	  //std::cout << "search " << itile << " " << jtile << std::endl;
             double fastest=0.0;
             for (int t=0; t<ntrial; t++) {
@@ -96,7 +96,7 @@ void search(int ni, int nj, int nk) {
 	if (s.rate>0.95*best)
 	  printf("      %2d %2d %8.2f", s.it, s.jt, s.rate);
     }
-    printf("\n");
+    printf("\n");  fflush(stdout);
     free(a);
     free(b);
     free(c);
@@ -129,6 +129,12 @@ int main() {
       for (int n=1; n<=maxnsq; n++) 
         for (int m=1; m<=maxnsq; m++) 
 	  search(n,m,8);
+
+      std::cout << "(16,16*16)T(16,n) " << maxmmm << std::endl;
+      for (int n=1; n<=maxmmm; n++) search(16*16,n,16);
+
+      std::cout << "(16,n)T(16,16*16) " << maxmmm << std::endl;
+      for (int n=1; n<=maxmmm; n++) search(n,16*16,16);
 
       // std::cout << "(20,20*20)T(20,n)\n";
       //  for (int n=1; n<21; n++) search(400,n,20);

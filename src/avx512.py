@@ -6,9 +6,10 @@ DATA_TYPE="double"
 REGISTER_WIDTH = 8
 NUMBER_OF_REGISTERS = 32
 MASK_IN_REGISTER = 0
-MAX_JTILE = 32
+MAX_JTILE = 48 # 40 also acceptable
 MAX_ITILE = 30
-TARGET_JTILE = 24
+TARGET_ITILE = 6
+TARGET_JTILE = 32
 
 def zero(register):
     print("%s=_mm512_setzero_pd(); " % register,end="")

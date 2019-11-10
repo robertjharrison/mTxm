@@ -7,7 +7,7 @@
 #include <ratio>
 #include <chrono>
 
-#ifdef X86
+#ifdef __x86_64
 /////// Cycle count on x86
 // Returns current cycle count for this thread
 static inline uint64_t cycle_count() {
@@ -118,25 +118,36 @@ class PerfData {
 #else
 class PerfData {
     time_point __start;
-    uint64_t cycle_cnt;
+    uint64_t __cycle_cnt;
     double proc_time;
     
  public:
     PerfData() {start();}
     void start() {
         __start = std::chrono::high_resolution_clock::now();            
-        cycle_cnt = ::cycle_count();
+        __cycle_cnt = ::cycle_count();
     }
     void stop() {
-        cycle_cnt = ::cycle_count() - cycle_cnt;
+        __cycle_cnt = ::cycle_count() - __cycle_cnt;
         time_point __end = std::chrono::high_resolution_clock::now();  
         std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(__end-__start);
         proc_time = time_span.count();
     }
     double cpu_time() {return proc_time;}
-    double cycle_count() {return double((cycle_cnt<<14)>>14);}
+    double cycle_count() {return double((__cycle_cnt<<14)>>14);}
     double flop_count() {return -1.0;}
     double gflops() {return -1.0;}
+    double frequency() {
+        time_point start = std::chrono::high_resolution_clock::now();            
+        uint64_t cycle_cnt = ::cycle_count();
+	int sum=0;
+	for (int i=0; i<100000000; i++) sum+=i;
+	cycle_cnt = ::cycle_count() - cycle_cnt;
+        time_point end = std::chrono::high_resolution_clock::now();  
+        std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end-start);
+	if (sum==99) std::cout << sum << std::endl;
+        return 1e-9*cycle_cnt/time_span.count();
+    }	
 };
 #endif
 

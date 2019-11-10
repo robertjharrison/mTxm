@@ -87,11 +87,11 @@ void timer(const char* s, funcT mTxmq, int ni, int nj, int nk, double *a, double
     double fastest=0.0, fastest_blas=0.0;
 
     double scale = 1e-9;
-    double target = 1e-3;
+    double target = 1e-3; // was 1e-3
     
     double nflop = 2.0*ni*nj*nk;
     double est = 1e-6 + nflop/DFLOPS;
-    int ntrial=100;
+    int ntrial=10; // was 100
 
     // Ajust repetition count to hit target duration
     int nloop=std::max(1,int(target/est));
@@ -183,6 +183,11 @@ int main() {
     auto num = std::chrono::high_resolution_clock::period::num;
     auto den = std::chrono::high_resolution_clock::period::den;
     std::cout << "period " << double(num)/den << std::endl;
+    {
+      PerfData p;
+      double freq = p.frequency();
+      std::cout << "frequency (GHz) " << freq << std::endl;
+    }
 
     try {
       timer(&mTxmqG);
