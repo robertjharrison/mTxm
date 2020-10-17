@@ -125,10 +125,10 @@ def gen(itile,jtile):
     print(indent+" ",end="")
     for j in range(njreg):
         is_incomplete = j==(njreg-1)and(jtile%arch.REGISTER_WIDTH)        
-        arch.load(b(j),"pbkj+%d"%(j*arch.REGISTER_WIDTH),is_incomplete);
+        arch.load(b(j),"pbkj+%d"%(j*arch.REGISTER_WIDTH),is_incomplete);  ############# HERE don't +j if j==0
     print("");
     for i in range(itile):
-        arch.broadcast(indent,"aki","paki+%2d"%i)
+        arch.broadcast(indent,"aki","paki+%2d"%i)                         ############# HERE don't +i if i==0
         for j in range(njreg):
             arch.mul("aki",b(j),c(i,j))
         print("")
