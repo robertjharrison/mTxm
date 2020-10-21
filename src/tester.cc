@@ -139,7 +139,7 @@ int main() {
 
 
     try {
-      testone(&mTxmqG,400,1,20,false, true);
+        //testone(&mTxmqG,400,1,20,false, true);
       tester(&mTxmqG);
     }
     catch (const char* c) {

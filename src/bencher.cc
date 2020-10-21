@@ -154,7 +154,7 @@ void timer(funcT mTxmq) {
     
     timer("(144,12)T*(12,12)", mTxmq, 144, 12, 12,a,b,c);
     timer("(12,12)T*(12,144)", mTxmq, 12, 144, 12,a,b,c);
-    for (int ni=1; ni<=64; ni+=1) timer("(m,m)T*(m,m)", mTxmq, ni,ni,ni,a,b,c);
+    for (int ni=1; ni<=128; ni+=1) timer("(m,m)T*(m,m)", mTxmq, ni,ni,ni,a,b,c);
     for (int m=2; m<=32; m+=1) timer("(m,m*m)T*(m,m)", mTxmq, m*m,m,m,a,b,c);
     for (int m=2; m<=32; m+=1) timer("(m,m)T*(m,m*m)", mTxmq, m,m*m,m,a,b,c);
     for (int m=1; m<=20; m+=1) timer("(20,20*20)T*(20,m)", mTxmq, 20*20,m,20,a,b,c);

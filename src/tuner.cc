@@ -116,7 +116,7 @@ int main() {
     }
 
     try {
-      const int maxsq = 64;
+      const int maxsq = 128;
       std::cout << "square " << maxsq << std::endl;
       for (int n=1; n<=maxsq; n++) search(n,n,n);
       
