@@ -237,19 +237,9 @@ else:
     tune.print_tuner(arch,tuningdata)
 
 print('''
-void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* a, const double* b, int itile=-1, int jtile=-1) {
-  static bool initialized = false;
-  if (!initialized) {
-    init_dispatch();
-    initialized=true;
-  }
 
-  const int incA = dimi;
-  const int incB = dimj;
-  const int incC = dimj;
-
-  if (itile==-1 || jtile==-1) tune(dimi,dimj,dimk,itile,jtile);
-
+// This routine is always called with dimi and dimj a multiple of the corresponding tile size
+static void mTxmqX(int dimi, int dimj, int dimk, double* __restrict__ c, int incC, const double* a, int incA, const double* b, int incB, int itile, int jtile) {
 
   // Figure out size of cache tiles for k
   const int ktile_cache = std::min(%(TARGET_KTILE)s,dimk);
@@ -262,31 +252,12 @@ void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* 
     itile_cache = dimi;
   }
 
-  int njtile = dimj/jtile; // no. of full j-tiles
-  int nj0 = njtile*jtile;  // size of full j-block
-  int nj1 = dimj - nj0;    // size of j-remainder
-   
   // Loop thru k cache blocks
   const double* asave = a;
   double* __restrict__ csave = c;
   bool firstk = true;
   while (dimk) {
     int nk = std::min(ktile_cache,dimk);
-
-    // For last k cache tile redo the ij tiling
-    if (!firstk && nk!=ktile_cache) {
-      tune(dimi,dimj,nk,itile,jtile);
-      itile_cache = (%(CACHE_SIZE)s-jtile*ktile_cache-itile*jtile)/nk;
-      if (itile_cache<dimi) {
-        itile_cache -= (itile_cache%%itile); // make it a multiple of target register tile size
-      }
-      else {
-        itile_cache = dimi;
-      }
-      njtile = dimj/jtile; // no. of full j-tiles
-      nj0 = njtile*jtile;  // size of full j-block
-      nj1 = dimj - nj0;    // size of j-remainder
-    }
 
     // Loop thru i cache blocks
     int ni = dimi;
@@ -297,15 +268,9 @@ void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* 
       int ni0 = nitile*itile;            // size of full i-block
       int ni1 = itile_cache-ni0;         // size of i-remainder
 
-      (*kernel(std::min(ni0,itile),jtile))(ni0, nj0, nk, c, incC, a, incA, b, incB, firstk);
-      if (nj1) {
-          (*kernel(std::min(ni0,itile),nj1))(ni0, nj1, nk, c+nj0, incC, a, incA, b+nj0, incB, firstk);
-      }
+      (*kernel(std::min(ni0,itile),jtile))(ni0, dimj, nk, c, incC, a, incA, b, incB, firstk);
       if (ni1) {
-          (*kernel(ni1,jtile))(ni1, nj0, nk, c+ni0*incC, incC, a+ni0, incA, b, incB, firstk);
-      }
-      if (ni1 && nj1) {
-          (*kernel(std::min(ni1,itile),nj1))(ni1, nj1, nk, c+ni0*incC+nj0, incC, a+ni0, incA, b+nj0, incB, firstk);
+          (*kernel(ni1,jtile))(ni1, dimj, nk, c+ni0*incC, incC, a+ni0, incA, b, incB, firstk);
       }
 
       a += itile_cache;
@@ -319,6 +284,42 @@ void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* 
     dimk -= nk;
     firstk = false;
   }
+}
+
+void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* a, const double* b, int itile=-1, int jtile=-1) {
+  static bool initialized = false;
+  if (!initialized) {
+    init_dispatch();
+    initialized=true;
+  }
+
+  const int incA = dimi;
+  const int incB = dimj;
+  const int incC = dimj;
+
+  if (itile==-1 || jtile==-1) tune(dimi,dimj,dimk,itile,jtile);
+
+  // Figure out i tiling
+  std::div_t di = std::div(dimi,itile); 
+  int nitile = di.quot;   // No. of i tiles
+  int ni0 = nitile*itile; // Total size of complete tiles
+  int ni1 = di.rem;       // Remainder
+
+  // Figure out j tiling
+  std::div_t dj = std::div(dimj,jtile);
+  int njtile = dj.quot;
+  int nj0 = njtile*jtile;
+  int nj1 = dj.rem;
+
+  // Multiply each block
+
+  if (ni0 && nj0) mTxmqX(ni0, nj0, dimk, c, incC, a, incA, b, incB, itile, jtile);
+
+  if (ni0 && nj1) mTxmqX(ni0, nj1, dimk, c+nj0, incC, a, incA, b+nj0, incB, itile, nj1); // Redoing the tiling might help
+
+  if (ni1 && nj0) mTxmqX(ni1, nj0, dimk, c+ni0*incC, incC, a+ni0, incA, b, incB, ni1, jtile);  // Redoing the tiling might help
+
+  if (ni1 && nj1) mTxmqX(ni1, nj1, dimk, c+ni0*incC+nj0, incC, a+ni0, incA, b+nj0, incB, ni1, nj1); // Know these tiles fit
 }
 ''' % {"TARGET_KTILE":arch.TARGET_KTILE, "CACHE_SIZE":arch.CACHE_SIZE})
 
