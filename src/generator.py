@@ -241,48 +241,50 @@ print('''
 // This routine is always called with dimi and dimj a multiple of the corresponding tile size
 static void mTxmqX(int dimi, int dimj, int dimk, double* __restrict__ c, int incC, const double* a, int incA, const double* b, int incB, int itile, int jtile) {
 
-  // Figure out size of cache tiles for k
-  const int ktile_cache = std::min(%(TARGET_KTILE)s,dimk);
+  const int target_reuse_factor = 3;  
+  const int ktile_cache = std::min(dimk, (%(CACHE_SIZE)s - itile*jtile) / (std::min(target_reuse_factor*itile,dimi)+std::min(target_reuse_factor*jtile,dimj)));
+  //const int ktile_cache = std::min(%(TARGET_KTILE)s,dimk);
 
-  int itile_cache = (%(CACHE_SIZE)s-jtile*ktile_cache-itile*jtile)/ktile_cache;
-  if (itile_cache<dimi) {
-    itile_cache -= (itile_cache%%itile); // make it a multiple of target register tile size
-  }
-  else {
-    itile_cache = dimi;
-  }
+  int reuse_factor = (%(CACHE_SIZE)s - itile*jtile) / ktile_cache;
+  int itile_cache = std::min(reuse_factor*itile,dimi);
+  int jtile_cache = std::min(reuse_factor*jtile,dimj);
 
-  // Loop thru k cache blocks
-  const double* asave = a;
+  const double* const asave = a;
+  const double* bsave = b;
   double* __restrict__ csave = c;
-  bool firstk = true;
-  while (dimk) {
-    int nk = std::min(ktile_cache,dimk);
 
-    // Loop thru i cache blocks
-    int ni = dimi;
-    while (ni) {
-      itile_cache = std::min(ni,itile_cache);
-      itile = std::min(ni,itile);
-      int nitile = itile_cache/itile;    // number of full (register) i-tiles per cache block
-      int ni0 = nitile*itile;            // size of full i-block
-      int ni1 = itile_cache-ni0;         // size of i-remainder
+  auto f = kernel(itile,jtile);
 
-      (*kernel(std::min(ni0,itile),jtile))(ni0, dimj, nk, c, incC, a, incA, b, incB, firstk);
-      if (ni1) {
-          (*kernel(ni1,jtile))(ni1, dimj, nk, c+ni0*incC, incC, a+ni0, incA, b, incB, firstk);
+  int numj = dimj;
+  while (numj) {
+    int nj = std::min(numj,jtile_cache);
+ 
+    bool firstk = true;
+    int numk = dimk;
+    while (numk) {
+      int nk = std::min(numk,ktile_cache);
+
+      const double* ak = asave;
+      int numi = dimi;
+      while (numi) {
+        int ni = std::min(numi,itile_cache);
+        
+        (*f)(ni, nj, nk, c, incC, a, incA, b, incB, firstk);
+
+        a += ni;
+        c += ni*incC;
+        numi -= ni;
       }
-
-      a += itile_cache;
-      c += itile_cache*incC;
-      ni -= itile_cache;
+      firstk = false;
+      a = ak += nk*incA;
+      b += nk*incB;
+      c = csave;
+      numk -= nk;
     }
-
-    a = asave += nk*incA;
-    b += nk*incB;
-    c = csave;
-    dimk -= nk;
-    firstk = false;
+    a = asave;
+    b = bsave += nj;
+    c = csave += nj;
+    numj -= nj;
   }
 }
 
