@@ -99,7 +99,7 @@ void timer(const char* s, funcT mTxmq, int ni, int nj, int nk, double *a, double
       //{ //while (true) {
       PerfData perf;
       for (int loop=0; loop<nloop; ++loop) {
-	mTxmq(ni,nj,nk,c,a,b,-1,16);
+	mTxmq(ni,nj,nk,c,nj,a,ni,b,nj,-1,-1);
       }
       perf.stop();
       double used = perf.cpu_time();
@@ -113,7 +113,7 @@ void timer(const char* s, funcT mTxmq, int ni, int nj, int nk, double *a, double
         double rate;
         PerfData perf;
         for (int loop=0; loop<nloop; ++loop) {
-            mTxmq(ni,nj,nk,c,a,b,-1,16);
+	  mTxmq(ni,nj,nk,c,nj,a,ni,b,nj,-1,-1);
         }
         perf.stop();
         double used = perf.cpu_time()/nloop;

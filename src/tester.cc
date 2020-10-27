@@ -6,6 +6,7 @@
 #include <list>
 
 #include "mTxmq.h"
+using namespace mTxmqdetail;
 
 using namespace std;
 
@@ -24,12 +25,12 @@ void ran_fill(int n, double *a) {
 
 
 void mTxm(int dimi, int dimj, int dimk,
-          double* __restrict__ c, const double* a, const double* b, bool transposeC=false) {
+          double* __restrict__ c, int incC, const double* a, int incA, const double* b, int incB, bool transposeC=false) {
     if (transposeC) {
         for (int k=0; k<dimk; ++k) {
             for (int j=0; j<dimj; ++j) {
                 for (int i=0; i<dimi; ++i) {
-                    c[j*dimi+i] += a[k*dimi+i]*b[k*dimj+j];
+                    c[j*incC+i] += a[k*incA+i]*b[k*incB+j];
                 }
             }
         }
@@ -38,7 +39,7 @@ void mTxm(int dimi, int dimj, int dimk,
         for (int k=0; k<dimk; ++k) {
             for (int j=0; j<dimj; ++j) {
                 for (int i=0; i<dimi; ++i) {
-                    c[i*dimj+j] += a[k*dimi+i]*b[k*dimj+j];
+                    c[i*incC+j] += a[k*incA+i]*b[k*incB+j];
                 }
             }
         }
@@ -75,11 +76,11 @@ void testone(funcT mTxmq, int ni, int nj, int nk, bool debugging, bool trace) {
     printmat("b", b, nk, nj);
   }
 
-  mTxm (ni,nj,nk,c,a,b,false);
+  mTxm(ni,nj,nk,c,nj,a,ni,b,nj,false);
 
   set_kernel_trace(trace);
   if (trace) std::cout << "normal\n";
-  mTxmq(ni,nj,nk,d,a,b,-1,16);
+  mTxmq(ni,nj,nk,d,nj,a,ni,b,nj,-1,-1);
   // if (trace) std::cout << "transpose\n";
   // mTxmq(nj,ni,nk,e,b,a,true);
   set_kernel_trace(false);

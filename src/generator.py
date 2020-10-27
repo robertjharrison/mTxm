@@ -224,16 +224,16 @@ else:
     tune.print_tuner(arch,tuningdata)
 
 print('''
-void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* a, const double* b, int itile=-1, int jtile=-1) {
+void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, int incC, const double* a, int incA, const double* b, int incB, int itile=-1, int jtile=-1) {
   static bool initialized = false;
   if (!initialized) {
     init_dispatch();
     initialized=true;
   }
 
-  const int incA = dimi;
-  const int incB = dimj;
-  const int incC = dimj;
+  //const int incA = dimi;
+  //const int incB = dimj;
+  //const int incC = dimj;
 
   if (itile==-1 || jtile==-1) tune(dimi,dimj,dimk,itile,jtile);
 
@@ -279,11 +279,13 @@ void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* 
 
 f = open("mTxmq.h","w")
 f.write("extern void set_kernel_trace(bool);\n")
-f.write("extern void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* a, const double* b, int itile=-1, int jtile=-1);\n")
-f.write("static const int MAX_ITILE=%d, MAX_JTILE=%d;\n" % (arch.MAX_ITILE,arch.MAX_JTILE))
-f.write("static const int TARGET_ITILE=%d;\n"%arch.TARGET_ITILE)
-f.write("static const int TARGET_JTILE=%d;\n"%arch.TARGET_JTILE)
-f.write("static const int REGISTER_WIDTH=%d;\n"%arch.REGISTER_WIDTH)
-f.write("static const int MASK_IN_REGISTER=%d;\n"%arch.MASK_IN_REGISTER)
-f.write("static const int NUMBER_OF_REGISTERS=%d;\n"%arch.NUMBER_OF_REGISTERS)
+f.write("extern void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, int incC, const double* a, int incA, const double* b, int incB, int itile=-1, int jtile=-1);\n")
+f.write("namespace mTxmqdetail {\n")
+f.write("  static const int MAX_ITILE=%d, MAX_JTILE=%d;\n" % (arch.MAX_ITILE,arch.MAX_JTILE))
+f.write("  static const int TARGET_ITILE=%d;\n"%arch.TARGET_ITILE)
+f.write("  static const int TARGET_JTILE=%d;\n"%arch.TARGET_JTILE)
+f.write("  static const int REGISTER_WIDTH=%d;\n"%arch.REGISTER_WIDTH)
+f.write("  static const int MASK_IN_REGISTER=%d;\n"%arch.MASK_IN_REGISTER)
+f.write("  static const int NUMBER_OF_REGISTERS=%d;\n"%arch.NUMBER_OF_REGISTERS)
+f.write("}\n")
 f.close()

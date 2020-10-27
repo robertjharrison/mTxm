@@ -7,6 +7,7 @@
 #include <sched.h>
 
 #include "mTxmq.h"
+using namespace mTxmqdetail;
 
 #include "timerstuff.h"
 
@@ -47,7 +48,7 @@ void search(int ni, int nj, int nk) {
     for (int rep=0; rep<2; rep++) {
       PerfData perf;
       for (int loop=0; loop<nloop; ++loop) {
-	mTxmqG(ni,nj,nk,c,a,b,-1,-1);
+	mTxmqG(ni,nj,nk,c,nj,a,ni,b,nj,-1,-1);
       }
       perf.stop();
       double used = perf.cpu_time();
@@ -77,7 +78,7 @@ void search(int ni, int nj, int nk) {
                 double rate;
                 PerfData perf;
                 for (int loop=0; loop<nloop; ++loop) {
-                    mTxmqG(ni,nj,nk,c,a,b,itile,jtile);
+		  mTxmqG(ni,nj,nk,c,nj,a,ni,b,nj,itile,jtile);
                 }
                 perf.stop();
                 double used = perf.cpu_time()/nloop;
