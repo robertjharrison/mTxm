@@ -55,7 +55,7 @@ def kernel_name(itile,jtile):
 
 def print_opening(itile,jtile):
     ''' Print the stuff at the beginning of a kernel ''' 
-    print("\nstatic void %s(const int dimi,const int dimj,const int dimk,%s* __restrict__ c,int incC,const %s* a,int incA,const %s* b,int incB, bool firstk) {" % (kernel_name(itile,jtile),arch.DATA_TYPE,arch.DATA_TYPE,arch.DATA_TYPE))
+    print("\nstatic void %s(const int dimi,const int dimj,const int dimk,%s* __restrict__ c,int incC,const %s* a,int incA,const %s* b,int incB) {" % (kernel_name(itile,jtile),arch.DATA_TYPE,arch.DATA_TYPE,arch.DATA_TYPE))
     indent=tab
     print(indent,"const int itile=%d;"%itile)
     print(indent,"const int jtile=%d;"%jtile)
@@ -121,12 +121,10 @@ def gen(itile,jtile):
     ##         zero(c(i,j))
     ##     print("")
 
-    # if firstk peel off first loop of k replacing fma with mul, otherwise load c
-    print(indent, "if (firstk) {")
-    indent=4*tab
+    # peel off first loop of k replacing fma with mul
     print(indent+" ",end="")
     for j in range(njreg):
-        is_incomplete = j==(njreg-1)and(jtile%arch.REGISTER_WIDTH)
+        is_incomplete = j==(njreg-1)and(jtile%arch.REGISTER_WIDTH)        
         arch.load(b(j),"pbkj+%d"%(j*arch.REGISTER_WIDTH),is_incomplete);  ############# HERE don't +j if j==0
     print("");
     for i in range(itile):
@@ -135,23 +133,12 @@ def gen(itile,jtile):
             arch.mul("aki",b(j),c(i,j))
         print("")
     print(indent,"pbkj+=incB,paki+=incA;");
-    indent=3*tab
-    print(indent,"} else {")
-    indent=4*tab
-    for i in range(itile):
-        print(indent+" ",end="")
-        for j in range(njreg):
-            is_incomplete = j==(njreg-1)and(jtile%arch.REGISTER_WIDTH)        
-            arch.load(c(i,j),"pcij+incC*%2d+%d"%(i,j*arch.REGISTER_WIDTH),is_incomplete)
-        print("")
-    indent=3*tab
-    print(indent,"}")
     
     print(indent,'__asm__("/*start %s inner loop*/");'%kernel_name(itile,jtile))
     # loop over remainder of k
     #### for when we peel off front loop print(indent,"pbkj+=incB,paki+=incA;")
     print_nounroll()
-    print(indent,"for (int k=int(firstk); k<dimk; k++,pbkj+=incB,paki+=incA) {")
+    print(indent,"for (int k=1; k<dimk; k++,pbkj+=incB,paki+=incA) {")
     indent=4*tab
 
     # load b
@@ -189,7 +176,7 @@ def gen(itile,jtile):
 arch.print_include()
 print("static bool kernel_trace = false;")
 print("void set_kernel_trace(bool value){kernel_trace=value;}")
-print("using kernelT = void (*)(const int dimi,const int dimj,const int dimk,double* __restrict__ c,int incC,const double* a,int incA,const double* b,int incB,bool firstk);")
+print("using kernelT = void (*)(const int dimi,const int dimj,const int dimk,double* __restrict__ c,int incC,const double* a,int incA,const double* b,int incB);")
 print("static const int MAX_ITILE=%d, MAX_JTILE=%d;" % (arch.MAX_ITILE,arch.MAX_JTILE))
 print("static const int TARGET_ITILE=%d;"%arch.TARGET_ITILE)
 print("static const int TARGET_JTILE=%d;"%arch.TARGET_JTILE)
@@ -237,57 +224,6 @@ else:
     tune.print_tuner(arch,tuningdata)
 
 print('''
-
-// This routine is always called with dimi and dimj a multiple of the corresponding tile size
-static void mTxmqX(int dimi, int dimj, int dimk, double* __restrict__ c, int incC, const double* a, int incA, const double* b, int incB, int itile, int jtile) {
-
-  const int target_reuse_factor = 3;  
-  const int ktile_cache = std::min(dimk, (%(CACHE_SIZE)s - itile*jtile) / (std::min(target_reuse_factor*itile,dimi)+std::min(target_reuse_factor*jtile,dimj)));
-  //const int ktile_cache = std::min(%(TARGET_KTILE)s,dimk);
-
-  int reuse_factor = (%(CACHE_SIZE)s - itile*jtile) / ktile_cache;
-  int itile_cache = std::min(reuse_factor*itile,dimi);
-  int jtile_cache = std::min(reuse_factor*jtile,dimj);
-
-  const double* const asave = a;
-  const double* bsave = b;
-  double* __restrict__ csave = c;
-
-  auto f = kernel(itile,jtile);
-
-  int numj = dimj;
-  while (numj) {
-    int nj = std::min(numj,jtile_cache);
- 
-    bool firstk = true;
-    int numk = dimk;
-    while (numk) {
-      int nk = std::min(numk,ktile_cache);
-
-      const double* ak = asave;
-      int numi = dimi;
-      while (numi) {
-        int ni = std::min(numi,itile_cache);
-        
-        (*f)(ni, nj, nk, c, incC, a, incA, b, incB, firstk);
-
-        a += ni;
-        c += ni*incC;
-        numi -= ni;
-      }
-      firstk = false;
-      a = ak += nk*incA;
-      b += nk*incB;
-      c = csave;
-      numk -= nk;
-    }
-    a = asave;
-    b = bsave += nj;
-    c = csave += nj;
-    numj -= nj;
-  }
-}
-
 void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* a, const double* b, int itile=-1, int jtile=-1) {
   static bool initialized = false;
   if (!initialized) {
@@ -301,29 +237,44 @@ void mTxmqG(int dimi, int dimj, int dimk, double* __restrict__ c, const double* 
 
   if (itile==-1 || jtile==-1) tune(dimi,dimj,dimk,itile,jtile);
 
-  // Figure out i tiling
-  std::div_t di = std::div(dimi,itile); 
-  int nitile = di.quot;   // No. of i tiles
-  int ni0 = nitile*itile; // Total size of complete tiles
-  int ni1 = di.rem;       // Remainder
+  const int cachesize = %(CACHE_SIZE)s;
+  int itile_cache = (cachesize-jtile*dimk-itile*jtile)/dimk;
+  itile_cache = std::min(dimi,std::max(itile,itile_cache));
+    
+  if (itile_cache<dimi) {
+    itile_cache -= (itile_cache%%itile); // make it a multiple of target register tile size
+  }
 
-  // Figure out j tiling
-  std::div_t dj = std::div(dimj,jtile);
-  int njtile = dj.quot;
-  int nj0 = njtile*jtile;
-  int nj1 = dj.rem;
+  int njtile = dimj/jtile; // no. of full j-tiles
+  int nj0 = njtile*jtile;  // size of full j-block
+  int nj1 = dimj - nj0;    // size of j-remainder
 
-  // Multiply each block
+  // Loop thru cache blocks
+  int ni = dimi;
+  while (ni) {
+    itile_cache = std::min(ni,itile_cache);
+    itile = std::min(ni,itile);
+    int nitile = itile_cache/itile;    // number of full (register) i-tiles per cache block
+    int ni0 = nitile*itile;            // size of full i-block
+    int ni1 = itile_cache-ni0;         // size of i-remainder
+    
+    (*kernel(std::min(ni0,itile),jtile))(ni0, nj0, dimk, c, incC, a, incA, b, incB);
+    if (nj1) {
+        (*kernel(std::min(ni0,itile),nj1))(ni0, nj1, dimk, c+nj0, incC, a, incA, b+nj0, incB);
+    }
+    if (ni1) {
+        (*kernel(ni1,jtile))(ni1, nj0, dimk, c+ni0*incC, incC, a+ni0, incA, b, incB);
+    }
+    if (ni1 && nj1) {
+        (*kernel(std::min(ni1,itile),nj1))(ni1, nj1, dimk, c+ni0*incC+nj0, incC, a+ni0, incA, b+nj0, incB);
+    }
 
-  if (ni0 && nj0) mTxmqX(ni0, nj0, dimk, c, incC, a, incA, b, incB, itile, jtile);
-
-  if (ni0 && nj1) mTxmqX(ni0, nj1, dimk, c+nj0, incC, a, incA, b+nj0, incB, itile, nj1); // Redoing the tiling might help
-
-  if (ni1 && nj0) mTxmqX(ni1, nj0, dimk, c+ni0*incC, incC, a+ni0, incA, b, incB, ni1, jtile);  // Redoing the tiling might help
-
-  if (ni1 && nj1) mTxmqX(ni1, nj1, dimk, c+ni0*incC+nj0, incC, a+ni0, incA, b+nj0, incB, ni1, nj1); // Know these tiles fit
+    a += itile_cache;
+    c += itile_cache*incC;
+    ni -= itile_cache;
+  }
 }
-''' % {"TARGET_KTILE":arch.TARGET_KTILE, "CACHE_SIZE":arch.CACHE_SIZE})
+''' % {'CACHE_SIZE':arch.CACHE_SIZE})
 
 
 f = open("mTxmq.h","w")

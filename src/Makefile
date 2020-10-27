@@ -1,15 +1,14 @@
-TARGET_ARCHITECTURE=avx2
+#TARGET_ARCHITECTURE=avx2
 #TARGET_ARCHITECTURE=avx512
 #TARGET_ARCHITECTURE=neon
-#TARGET_ARCHITECTURE=sve512
-
+TARGET_ARCHITECTURE=sve512
 
 #TUNING_DATA=tune-thunderx2.txt
 #TUNING_DATA=tune-graviton.txt
 #TUNING_DATA=tune-haswell.txt
 #TUNING_DATA=tune-skylake-avx512.txt
-TUNING_DATA=tune-p17-tilek4.txt
-
+#TUNING_DATA=tune-p17-tilek4.txt
+TUNING_DATA=tune-a64fx.txt
 
 # Intel compiler for AVX512 (snmem)
 #CXX = icpc
@@ -18,10 +17,10 @@ TUNING_DATA=tune-p17-tilek4.txt
 
 
 # g++-9 for AVX2 (laptop) with mkl
-CXX = g++
-CXXFLAGS = -Ofast -mtune=native -ffast-math -mavx -mavx2 -mfma -I. -std=c++17 -DUSE_AVX2 -Wall -Wno-unused-but-set-variable -m64 -I${MKLROOT}/include
-LDFLAGS = -L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
-PYTHON = python
+#CXX = g++
+#CXXFLAGS = -Ofast -mtune=native -ffast-math -mavx -mavx2 -mfma -I. -std=c++17 -DUSE_AVX2 -Wall -Wno-unused-but-set-variable -m64 -I${MKLROOT}/include
+#LDFLAGS = -L${MKLROOT}/lib/intel64 -Wl,--no-as-needed -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
+#PYTHON = python
 
 # g++-9 for AVX2 (laptop) with libxsmm
 #CXX = g++-9
@@ -69,11 +68,11 @@ PYTHON = python
 #PYTHON = python
 
 # g++ compiler for A64FX
-#SCILIB=-L/opt/cray/pe/libsci/20.09.1.1/CRAY/9.0/aarch64/lib -lsci_cray -ldl -lpthread
-#CXXFLAGS = -Ofast -ffast-math -Wall -mtune=native -mcpu=native -I. -std=c++17 -march=armv8-a+sve -msve-vector-bits=512
-#CXX = g++
-#LDFLAGS = $(SCILIB)
-#PYTHON = python
+SCILIB=-L/opt/cray/pe/libsci/20.09.1.1/CRAY/9.0/aarch64/lib -lsci_cray -ldl -lpthread
+CXXFLAGS = -Ofast -ffast-math -Wall -mtune=native -mcpu=native -I. -std=c++17 -march=armv8-a+sve -msve-vector-bits=512
+CXX = g++
+LDFLAGS = $(SCILIB)
+PYTHON = python
 
 TARGETS = tester tuner bencher mm
 

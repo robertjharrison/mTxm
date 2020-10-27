@@ -64,7 +64,8 @@ void search(int ni, int nj, int nk) {
 
     const int W=REGISTER_WIDTH;
     const int NR=NUMBER_OF_REGISTERS;
-    for (int jtile=std::min(W,nj); jtile<=std::min(MAX_JTILE,nj); jtile++) {
+    //for (int jtile=std::min(W,nj); jtile<=std::min(MAX_JTILE,nj); jtile++) {
+    for (int jtile=1; jtile<=std::min(MAX_JTILE,nj); jtile++) {
         int jr = (jtile-1)/W+1;
 	// this must match corresponding loop in gen.py
         int maxitile = std::min(MAX_ITILE,std::min((NR-1)/jr-1 + 2,ni));
